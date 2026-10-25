@@ -134,6 +134,51 @@ experiment is a sweep with real Claude Code sessions on Linux and on a second Wi
    through the real path, so presence is observed rather than inferred.
 3. Where a guard must hold, set `onFailure: "block"` with an explicit, measured latency budget, so a
    slow guard slows the agent instead of vanishing.
+4. Keep per-call guard cost flat under load: one long-lived process, or one process per call, not one
+   process per guard per call (section 6). Account for host suspend, which can outlast any practical
+   budget.
+
+## 6. Update, 25 October 2026: a fix, its result under load, and its limits
+
+Added after the note above was published; sections 1 to 5 are unchanged except recommendation 4.
+
+**A latency bench.** We replaced the five per-call guard processes with one dispatcher process that
+imports the same five guard functions and calls them in order, then benchmarked both forms on the
+same laptop with interleaved synthetic bursts of real Bash payloads. On 145 payloads (140 replayed
+from real calls, 5 known refusals) both forms returned the same decision and refusal text. The
+95th-percentile hook latency was 8.32, 24.54 and 36.31 s with five processes at 1, 4 and 8
+concurrent calls, against 0.95, 1.04 and 2.51 s with one process. Pre-registered: the 8-call ratio,
+forecast 0.35 [0.15, 0.70], pass at most 0.50; measured 0.069. The bench measures latency, not
+absence, and launched the old guards without the shell layer the real hooks used, so it understates
+the old cost. It is consistent with per-call start-up cost growing with concurrency on this machine;
+it does not isolate that as the cause, because the Linux replicas also started a process per call
+without failing.
+
+**After the change, on live traffic.** The dispatcher replaced the five hooks on 23 October (30 s
+budget, still failing open). In its first 9 hours it was absent on 0 of 2,211 matched calls (Wilson
+95% interval 0 to 0.17%), but no load of 11 or more transcripts occurred. Over the next two days, 124
+transcripts made 10,176 calls, 7,870 of them matched. While 12 to 20 transcripts were active, it was
+absent on 0 of 1,184 matched calls (0 of 990 shell calls). Pre-registered: at most 2% on at least 500
+calls, PASS. The dispatcher's own log, an independent count with one row per call it ran, held 7,908
+rows with no guard errors and agreed with the transcript count within 8 calls in every concurrency
+bin.
+
+**How much that shows.** Calls in the same 10-minute window share one machine state, so a per-call
+bound (0.32%) overstates the evidence. The 1,184 calls fall in six windows on one day, five of them
+consecutive. Windows are a weak unit too: before the change, 83 of 423 busy windows with at least 20
+shell calls had already been clean, so a pre-registered window-level test failed its own gate (clean
+share 0.196 against a pass bound of 0.10). Sustained episodes separate the regimes (not
+pre-registered): none of the 21 runs of five or more consecutive busy windows before the change was
+clean, and the one such run after it was. Under the old regime a clean sustained episode had
+probability at most about 0.15 (95% upper bound from 0 of 21), so one clean episode is encouraging,
+not conclusive. Load since the change peaked at 20 transcripts; above that is unread.
+
+**A second way to be absent: the host stopped.** All 5 absences after the change, of 7,870 matched
+calls, sit on one Windows Modern Standby episode (entered 02:56 and 02:59, exited 03:21 local time on
+25 October). Four timeout records carry hook durations of 1,509 to 1,511 s, about the length of the
+standby. A hook timer that counts wall-clock time through a suspend fires on resume, and the call
+proceeds. No timeout setting prevents this; a guard that blocks on failure, or a host that does not
+sleep under agents, does.
 
 ## Related work
 
