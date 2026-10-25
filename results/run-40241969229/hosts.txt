@@ -1,0 +1,72 @@
+== sweep-ubuntu-24.04-low1gb-r1
+Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 cpus 4
+start_avail_mb=14986 held_mb=13952 avail_mb=1137
+== sweep-ubuntu-24.04-low1gb-r2
+Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 cpus 4
+start_avail_mb=14969 held_mb=14080 avail_mb=1023
+== sweep-ubuntu-24.04-low1gb-r3
+Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 cpus 4
+start_avail_mb=15004 held_mb=13952 avail_mb=1131
+== sweep-ubuntu-24.04-normal-r1
+Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 cpus 4
+== sweep-ubuntu-24.04-normal-r2
+Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 cpus 4
+== sweep-ubuntu-24.04-normal-r3
+Linux-6.17.0-1022-azure-x86_64-with-glibc2.39 cpus 4
+== sweep-windows-2025-low1gb-r1
+Windows-2025Server-10.0.26100-SP0 cpus 4
+
+
+RealTimeProtectionEnabled : False
+AntivirusEnabled          : True
+
+
+
+start_avail_mb=13790 held_mb=12800 avail_mb=1056
+== sweep-windows-2025-low1gb-r2
+Windows-2025Server-10.0.26100-SP0 cpus 4
+
+
+RealTimeProtectionEnabled : False
+AntivirusEnabled          : True
+
+
+
+start_avail_mb=13758 held_mb=12672 avail_mb=1254
+== sweep-windows-2025-low1gb-r3
+Windows-2025Server-10.0.26100-SP0 cpus 4
+
+
+RealTimeProtectionEnabled : False
+AntivirusEnabled          : True
+
+
+
+start_avail_mb=13749 held_mb=12672 avail_mb=1124
+== sweep-windows-2025-normal-r1
+Windows-2025Server-10.0.26100-SP0 cpus 4
+
+
+RealTimeProtectionEnabled : False
+AntivirusEnabled          : True
+
+
+
+== sweep-windows-2025-normal-r2
+Windows-2025Server-10.0.26100-SP0 cpus 4
+
+
+RealTimeProtectionEnabled : False
+AntivirusEnabled          : True
+
+
+
+== sweep-windows-2025-normal-r3
+Windows-2025Server-10.0.26100-SP0 cpus 4
+
+
+RealTimeProtectionEnabled : False
+AntivirusEnabled          : True
+
+
+
