@@ -1,0 +1,95 @@
+name: guard presence under load
+
+# Does a PreToolUse-style guard stay inside its time budget when many agents share a machine?
+# Rerun it yourself: fork, then Actions > "guard presence under load" > Run workflow. Free on public repos.
+on:
+  workflow_dispatch:
+  push:
+    paths: ["loadtest/**", ".github/workflows/loadtest.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  sweep:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, ubuntu-24.04]
+        mem: [normal, low1gb]
+        rep: [r1, r2, r3]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Record the host
+        shell: bash
+        run: |
+          python -c "import os,platform; print(platform.platform(), 'cpus', os.cpu_count())" | tee env.txt
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -NoProfile -Command "Get-MpComputerStatus | Select-Object RealTimeProtectionEnabled,AntivirusEnabled | Format-List" | tee -a env.txt || true
+          fi
+      - name: Sweep both forms
+        shell: bash
+        env:
+          RU_LABEL: ${{ matrix.os }}/${{ matrix.mem }}/${{ matrix.rep }}
+        run: |
+          if [ "${{ matrix.mem }}" = "low1gb" ]; then
+            python loadtest/hog.py 1024 hog.txt &
+            HOG=$!
+            for i in $(seq 1 300); do [ -s hog.txt ] && break; sleep 1; done
+            cat hog.txt || echo "hog did not settle" | tee hog.txt
+          fi
+          python loadtest/sim.py per-call 45 1,4,8,12,16,24 out.jsonl
+          python loadtest/sim.py one-process 45 1,4,8,12,16,24 out.jsonl
+          if [ -n "$HOG" ]; then kill $HOG || true; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sweep-${{ matrix.os }}-${{ matrix.mem }}-${{ matrix.rep }}
+          path: |
+            out.jsonl
+            env.txt
+            hog.txt
+          if-no-files-found: ignore
+
+  summarize:
+    needs: sweep
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Combine and apply the registered gate
+        shell: bash
+        run: |
+          cat art/*/out.jsonl > combined.jsonl
+          for d in art/*/; do echo "== $d"; cat "$d/env.txt" "$d/hog.txt" 2>/dev/null; done > hosts.txt
+          python loadtest/summarize.py combined.jsonl summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish to the loadtest-results branch
+        shell: bash
+        run: |
+          dest="results/run-${GITHUB_RUN_ID}"
+          mkdir -p /tmp/res && cp combined.jsonl summary.md hosts.txt /tmp/res/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin loadtest-results 2>/dev/null; then
+            git checkout -B loadtest-results FETCH_HEAD
+          else
+            git checkout --orphan loadtest-results
+            git rm -rf . >/dev/null
+          fi
+          mkdir -p "$dest" && cp /tmp/res/* "$dest/"
+          cp /tmp/res/summary.md LATEST.md
+          git add "$dest" LATEST.md
+          git commit -m "loadtest run ${GITHUB_RUN_ID} (${GITHUB_SHA::7})"
+          git push origin loadtest-results
