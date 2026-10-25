@@ -1,0 +1,106 @@
+name: "guard presence: antivirus arm"
+
+# The first sweep found no guard absence on clean runners, and Defender real-time protection was OFF on every Windows
+# runner, unlike a default developer laptop. This arm turns it ON (and removes Defender's exclusions) against a same-run
+# OFF control. Rerun it yourself: fork, then Actions > "guard presence: antivirus arm" > Run workflow.
+on:
+  workflow_dispatch:
+  push:
+    paths: ["loadtest/summarize_av.py", ".github/workflows/loadtest_av.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  sweep:
+    strategy:
+      fail-fast: false
+      matrix:
+        av: [rtp-on, rtp-off]
+        mem: [normal, low1gb]
+        rep: [r1, r2, r3]
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Set Defender real-time protection
+        shell: pwsh
+        run: |
+          if ("${{ matrix.av }}" -eq "rtp-on") {
+            try { Set-MpPreference -DisableRealtimeMonitoring $false -ErrorAction Stop } catch { "set failed: $_" | Tee-Object -FilePath av.txt -Append }
+            $p = Get-MpPreference
+            foreach ($x in @($p.ExclusionPath)) { if ($x) { try { Remove-MpPreference -ExclusionPath $x -ErrorAction Stop } catch {} } }
+            foreach ($x in @($p.ExclusionProcess)) { if ($x) { try { Remove-MpPreference -ExclusionProcess $x -ErrorAction Stop } catch {} } }
+            foreach ($x in @($p.ExclusionExtension)) { if ($x) { try { Remove-MpPreference -ExclusionExtension $x -ErrorAction Stop } catch {} } }
+          } else {
+            try { Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction Stop } catch { "set failed: $_" | Tee-Object -FilePath av.txt -Append }
+          }
+          Start-Sleep -Seconds 5
+          $s = Get-MpComputerStatus
+          "RTP=$($s.RealTimeProtectionEnabled) AMService=$($s.AMServiceEnabled) Antivirus=$($s.AntivirusEnabled) Tamper=$($s.IsTamperProtected) Engine=$($s.AMEngineVersion)" | Tee-Object -FilePath av.txt -Append
+          "exclusions_path=$((Get-MpPreference).ExclusionPath -join ';') exclusions_process=$((Get-MpPreference).ExclusionProcess -join ';')" | Tee-Object -FilePath av.txt -Append
+          "RU_EFF=eff-$($s.RealTimeProtectionEnabled)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Sweep both forms
+        shell: bash
+        run: |
+          export RU_LABEL="windows-2025/${{ matrix.mem }}/${{ matrix.rep }}/${{ matrix.av }}/${RU_EFF}"
+          echo "label $RU_LABEL"
+          if [ "${{ matrix.mem }}" = "low1gb" ]; then
+            python loadtest/hog.py 1024 hog.txt &
+            HOG=$!
+            for i in $(seq 1 300); do [ -s hog.txt ] && break; sleep 1; done
+            cat hog.txt || echo "hog did not settle" | tee hog.txt
+          fi
+          python loadtest/sim.py per-call 45 1,4,8,12,16,24 out.jsonl
+          python loadtest/sim.py one-process 45 1,4,8,12,16,24 out.jsonl
+          if [ -n "$HOG" ]; then kill $HOG || true; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: av-${{ matrix.av }}-${{ matrix.mem }}-${{ matrix.rep }}
+          path: |
+            out.jsonl
+            av.txt
+            hog.txt
+          if-no-files-found: ignore
+
+  summarize:
+    needs: sweep
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          path: art
+      - name: Combine and apply the registered gate
+        shell: bash
+        run: |
+          cat art/*/out.jsonl > combined.jsonl
+          for d in art/*/; do echo "== $d"; cat "$d/av.txt" "$d/hog.txt" 2>/dev/null || true; done > hosts.txt
+          python loadtest/summarize_av.py combined.jsonl summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish to the loadtest-results branch
+        shell: bash
+        run: |
+          dest="results/av-run-${GITHUB_RUN_ID}"
+          mkdir -p /tmp/res && cp combined.jsonl summary.md hosts.txt /tmp/res/
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch origin loadtest-results 2>/dev/null; then
+            git checkout -B loadtest-results FETCH_HEAD
+          else
+            git checkout --orphan loadtest-results
+            git rm -rf . >/dev/null
+          fi
+          mkdir -p "$dest" && cp /tmp/res/* "$dest/"
+          cp /tmp/res/summary.md LATEST_AV.md
+          git add "$dest" LATEST_AV.md
+          git commit -m "antivirus arm run ${GITHUB_RUN_ID} (${GITHUB_SHA::7})"
+          git push origin loadtest-results
