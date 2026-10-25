@@ -1,0 +1,42 @@
+== art/av-rtp-off-low1gb-r1/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path=C:\;D:\ exclusions_process=
+start_avail_mb=13799 held_mb=12672 avail_mb=1107
+== art/av-rtp-off-low1gb-r2/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path=C:\;D:\ exclusions_process=
+start_avail_mb=13776 held_mb=12800 avail_mb=1041
+== art/av-rtp-off-low1gb-r3/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path=C:\;D:\ exclusions_process=
+start_avail_mb=13855 held_mb=12800 avail_mb=1110
+== art/av-rtp-off-normal-r1/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path=C:\;D:\ exclusions_process=
+== art/av-rtp-off-normal-r2/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path=C:\;D:\ exclusions_process=
+== art/av-rtp-off-normal-r3/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path=C:\;D:\ exclusions_process=
+== art/av-rtp-on-low1gb-r1/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path= exclusions_process=
+start_avail_mb=13882 held_mb=12800 avail_mb=1113
+== art/av-rtp-on-low1gb-r2/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path= exclusions_process=
+start_avail_mb=13755 held_mb=12672 avail_mb=1304
+== art/av-rtp-on-low1gb-r3/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path= exclusions_process=
+start_avail_mb=13720 held_mb=12672 avail_mb=1021
+== art/av-rtp-on-normal-r1/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path= exclusions_process=
+== art/av-rtp-on-normal-r2/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path= exclusions_process=
+== art/av-rtp-on-normal-r3/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+exclusions_path= exclusions_process=
