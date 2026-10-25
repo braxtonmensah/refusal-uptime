@@ -5,7 +5,7 @@ name: guard presence under load
 on:
   workflow_dispatch:
   push:
-    paths: ["loadtest/**", ".github/workflows/loadtest.yml"]
+    paths: ["loadtest/sim.py", "loadtest/guard_*.py", "loadtest/hog.py", "loadtest/summarize.py", ".github/workflows/loadtest.yml"]
 
 permissions:
   contents: write
@@ -72,7 +72,7 @@ jobs:
         shell: bash
         run: |
           cat art/*/out.jsonl > combined.jsonl
-          for d in art/*/; do echo "== $d"; cat "$d/env.txt" "$d/hog.txt" 2>/dev/null; done > hosts.txt
+          for d in art/*/; do echo "== $d"; cat "$d/env.txt" "$d/hog.txt" 2>/dev/null || true; done > hosts.txt
           python loadtest/summarize.py combined.jsonl summary.md
           cat summary.md >> "$GITHUB_STEP_SUMMARY"
       - name: Publish to the loadtest-results branch
