@@ -28,6 +28,16 @@ TRANSCRIPT = os.path.join(HERE, "transcript.jsonl")
 PER_CALL = [os.path.join(HERE, s) for s in
             ("guard_regex.py", "guard_transcript.py", "guard_regex.py", "guard_transcript.py", "guard_regex.py")]
 ONE = [os.path.join(HERE, "guard_all.py")]
+# How each guard process is launched. "none": the interpreter directly (exec form, like a hook with "args").
+# "bash": through Git Bash, as Claude Code runs a command-string hook on Windows when no shell is set.
+LAYER = os.environ.get("RU_LAYER", "none")
+BASH = os.environ.get("RU_BASH", "bash")
+
+
+def launch(script):
+    if LAYER == "bash":
+        return [BASH, "-c", '"%s" -I "%s"' % (PY.replace("\\", "/"), script.replace("\\", "/"))]
+    return [PY, "-I", script]
 
 
 def make_transcript():
@@ -57,7 +67,7 @@ def agent(scripts, deadline, q):
         t0 = time.perf_counter()
         procs = []
         for s in scripts:
-            p = subprocess.Popen([PY, "-I", s], stdin=subprocess.PIPE,
+            p = subprocess.Popen(launch(s), stdin=subprocess.PIPE,
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             p.stdin.write(payload)
             p.stdin.close()
@@ -79,7 +89,7 @@ def main():
     make_transcript()
     cpus = os.cpu_count()
     env = {"host": platform.node(), "os": platform.platform(), "python": platform.python_version(), "cpus": cpus,
-           "form": form, "processes_per_call": len(scripts), "label": os.environ.get("RU_LABEL", "")}
+           "form": form, "processes_per_call": len(scripts), "layer": LAYER, "label": os.environ.get("RU_LABEL", "")}
     with open(out, "a") as fh:
         for n in levels:
             q = mp.Queue()
