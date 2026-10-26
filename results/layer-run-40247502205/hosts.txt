@@ -1,0 +1,18 @@
+== art/layer-rtp-off-r1/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+bash=2.56.0.windows.2
+== art/layer-rtp-off-r2/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+bash=2.56.0.windows.2
+== art/layer-rtp-off-r3/
+RTP=False AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+bash=2.56.0.windows.2
+== art/layer-rtp-on-r1/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+bash=2.56.0.windows.2
+== art/layer-rtp-on-r2/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+bash=2.56.0.windows.2
+== art/layer-rtp-on-r3/
+RTP=True AMService=True Antivirus=True Tamper=False Engine=1.1.26090.9
+bash=2.56.0.windows.2
